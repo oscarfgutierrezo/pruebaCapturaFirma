@@ -10,6 +10,7 @@ export const Canvas = () => {
     const [isDrawing, setIsDrawing] = useState(false);
   
     useEffect(() => {
+      // Configuracion del contexto de dibujo
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
       canvas.width = 500;
@@ -18,20 +19,18 @@ export const Canvas = () => {
       context.lineWidth = 3
       context.fillStyle = "white";
       context.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Referencia al contexto de dibujo
       contextRef.current = context;
     }, [])
     
   
     const startDrawing = ({ nativeEvent }) => {
+      // Posición del evento en relación a los bordes del nodo (canvas)
       const { offsetX, offsetY } =  nativeEvent;
       contextRef.current.beginPath();
       contextRef.current.moveTo(offsetX, offsetY);
       setIsDrawing(true);
-    };
-  
-    const finishDrawing = () => {
-      contextRef.current.closePath();
-      setIsDrawing(false);
     };
   
     const draw = ({ nativeEvent }) => {
@@ -41,26 +40,32 @@ export const Canvas = () => {
         contextRef.current.stroke();
       }
     };
+
+    const finishDrawing = () => {
+      contextRef.current.closePath();
+      setIsDrawing(false);
+    };
   
-    const reset = () => {
+    const resetCanvas = () => {
       contextRef.current.fillStyle = "white";
       contextRef.current.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height)
     }
 
-    const canvasToBlob = () => {
+    const getCanvasImage = () => {
+      // Crear un archivo jpg que contiene el contexto de dibujo
       canvasRef.current.toBlob( blob => {
-        console.log(blob);
-        save(blob);
-      }, 'image/jpeg', 0.8)
+        const file = new File([blob], 'prueba.jpg', { type: 'image/jpeg' });
+        sendCanvasImageToServer(file);
+      }, 'image/jpeg');
     }
 
-    const save = async (blob) => {
+    const sendCanvasImageToServer = async (file) => {
+      // Crear un FormData, necesario para el uso de Multer en el servidor
       const data = new FormData();
-      data.append("signatureImage", "123");
-      console.log(data);
+      data.append("image", file);
       
       try {
-        const res = await axios.post(`${url}/signature`, {"signatureImage": "123"}, { 
+        const res = await axios.post(`${url}/testForm`, data, { 
           headers: {
             'Content-type': 'multipart/form-data'
           }
@@ -69,20 +74,22 @@ export const Canvas = () => {
       } catch (error) {
         console.log(error);
       }
-    }
+    };
   
     return (
-      <div id="general-container">
-        <canvas style={{ border: '1px solid black' }}
-          onMouseDown={startDrawing}
-          onMouseUp={finishDrawing}
-          onMouseMove={draw}
-          ref={canvasRef}
-        />
-        <div id="btn-container">
-          <button id="btn-borrar" onClick={reset}>Borrar</button>
-          <button id="btn-guardar" onClick={canvasToBlob}>Guardar</button>
+      <>
+        <div id="general-container">
+          <canvas style={{ border: '1px solid black' }}
+            onMouseDown={startDrawing}
+            onMouseUp={finishDrawing}
+            onMouseMove={draw}
+            ref={canvasRef}
+          />
+          <div id="btn-container">
+            <button id="btn-borrar" onClick={resetCanvas}>Borrar</button>
+            <button id="btn-guardar" onClick={getCanvasImage}>Guardar</button>
+          </div>
         </div>
-      </div>
+      </>
     )
 }
